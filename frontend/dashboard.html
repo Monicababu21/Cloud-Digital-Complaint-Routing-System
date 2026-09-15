@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-brand">Complaint System</div>
+        <div class="navbar-menu" id="navbar-menu"></div>
+    </nav>
+    <div class="container">
+        <h2>User Dashboard</h2>
+        <div class="grid-cards" style="margin-top: 1rem;">
+            <div class="stat-card"><h3>Total Complaints</h3><div class="value" id="t-total">0</div></div>
+            <div class="stat-card"><h3>Pending</h3><div class="value" id="t-pending">0</div></div>
+            <div class="stat-card"><h3>In Progress</h3><div class="value" id="t-inprogress">0</div></div>
+            <div class="stat-card"><h3>Resolved</h3><div class="value" id="t-resolved">0</div></div>
+        </div>
+        
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3>Recent Complaints</h3>
+                <a href="/submit-complaint.html" class="btn btn-primary">New Complaint</a>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Title</th>
+                        <th>Department</th>
+                        <th>Status</th>
+                        <th>Date</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="complaintsTable"></tbody>
+            </table>
+        </div>
+    </div>
+    
+    <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
+    <script>
+        const user = checkAuth(['user']);
+        setupNavbar(user);
+        
+        async function load() {
+            const complaints = await apiCall('/complaints');
+            
+            document.getElementById('t-total').innerText = complaints.length;
+            document.getElementById('t-pending').innerText = complaints.filter(c => c.status === 'Pending' || c.status === 'Routed' || c.status === 'Assigned').length;
+            document.getElementById('t-inprogress').innerText = complaints.filter(c => c.status === 'In Progress').length;
+            document.getElementById('t-resolved').innerText = complaints.filter(c => c.status === 'Resolved').length;
+            
+            const tbody = document.getElementById('complaintsTable');
+            tbody.innerHTML = complaints.slice(0, 5).map(c => `
+                <tr>
+                    <td>#${c.id}</td>
+                    <td>${c.title}</td>
+                    <td>${c.department_name || 'Unassigned'}</td>
+                    <td><span class="badge badge-${c.status.replace(' ','')}">${c.status}</span></td>
+                    <td>${new Date(c.created_at).toLocaleDateString()}</td>
+                    <td><a href="/complaint-details.html?id=${c.id}" class="btn btn-primary" style="padding: 0.25rem 0.5rem; font-size: 0.875rem;">View</a></td>
+                </tr>
+            `).join('');
+        }
+        load();
+    </script>
+</body>
+</html>

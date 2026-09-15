@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Users</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-brand">Admin Panel</div>
+        <div class="navbar-menu" id="navbar-menu"></div>
+    </nav>
+    <div class="container">
+        <div class="card">
+            <h2>Users & Staff</h2>
+            <table>
+                <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Role</th><th>Department</th><th>Action</th></tr></thead>
+                <tbody id="u-table"></tbody>
+            </table>
+        </div>
+    </div>
+    
+    <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
+    <script>
+        const user = checkAuth(['admin']);
+        setupNavbar(user);
+        
+        let depts = [];
+        
+        async function load() {
+            depts = await apiCall('/departments');
+            const list = await apiCall('/users');
+            
+            document.getElementById('u-table').innerHTML = list.map(u => `
+                <tr>
+                    <td>${u.id}</td>
+                    <td>${u.name}</td>
+                    <td>${u.email}</td>
+                    <td><span class="badge" style="background:#e2e8f0; color:#0f172a">${u.role.toUpperCase()}</span></td>
+                    <td>${u.department_name || '-'}</td>
+                    <td>
+                        ${u.role !== 'admin' ? `
+                            <select onchange="assignDept(${u.id}, this.value)" style="width:auto; padding:0.25rem;">
+                                <option value="">Assign Dept...</option>
+                                ${depts.map(d => `<option value="${d.id}" ${u.department_name===d.name?'selected':''}>${d.name}</option>`).join('')}
+                            </select>
+                        ` : ''}
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        async function assignDept(uid, did) {
+            if(!did) return;
+            try {
+                await apiCall(`/users/${uid}/department`, 'PUT', {department_id: did});
+                alert('Assigned successfully (user is now staff)');
+                load();
+            } catch(e) { alert(e.message); }
+        }
+        load();
+    </script>
+</body>
+</html>

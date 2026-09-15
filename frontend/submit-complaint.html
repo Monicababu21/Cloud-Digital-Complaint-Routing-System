@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Submit Complaint</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-brand">Complaint System</div>
+        <div class="navbar-menu" id="navbar-menu"></div>
+    </nav>
+    <div class="container">
+        <div class="card" style="max-width: 600px; margin: 0 auto;">
+            <h2>Submit New Complaint</h2>
+            <div id="alertBox" class="alert"></div>
+            <form id="complaintForm" style="margin-top: 1rem;">
+                <div class="form-group">
+                    <label>Title</label>
+                    <input type="text" id="title" required placeholder="Brief title of the issue">
+                </div>
+                <div class="form-group">
+                    <label>Category</label>
+                    <select id="category" required>
+                        <option value="IT / Network">IT / Network</option>
+                        <option value="Electrical">Electrical</option>
+                        <option value="Plumbing">Plumbing</option>
+                        <option value="Maintenance">Maintenance</option>
+                        <option value="Housekeeping">Housekeeping</option>
+                        <option value="Security">Security</option>
+                        <option value="Transport">Transport</option>
+                        <option value="Academic Support">Academic Support</option>
+                        <option value="Administration">Administration</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Location</label>
+                    <input type="text" id="location" required placeholder="e.g. Room 101, Block A">
+                </div>
+                <div class="form-group">
+                    <label>Priority (Optional)</label>
+                    <select id="priority">
+                        <option value="Low">Low</option>
+                        <option value="Medium">Medium</option>
+                        <option value="High">High</option>
+                        <option value="Urgent">Urgent</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="description" rows="5" required placeholder="Detailed description of the problem..."></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%">Submit Complaint</button>
+            </form>
+        </div>
+    </div>
+    
+    <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
+    <script>
+        const user = checkAuth(['user']);
+        setupNavbar(user);
+        
+        document.getElementById('complaintForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const alertBox = document.getElementById('alertBox');
+            try {
+                const res = await apiCall('/complaints', 'POST', {
+                    title: document.getElementById('title').value,
+                    category: document.getElementById('category').value,
+                    location: document.getElementById('location').value,
+                    priority: document.getElementById('priority').value,
+                    description: document.getElementById('description').value
+                });
+                alertBox.textContent = res.message;
+                alertBox.className = 'alert alert-success';
+                alertBox.style.display = 'block';
+                setTimeout(() => window.location.href = `/complaint-details.html?id=${res.complaintId}`, 2000);
+            } catch (err) {
+                alertBox.textContent = err.message;
+                alertBox.className = 'alert alert-error';
+                alertBox.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>

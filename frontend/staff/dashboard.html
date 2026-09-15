@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Staff Dashboard</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-brand">Staff Panel</div>
+        <div class="navbar-menu" id="navbar-menu"></div>
+    </nav>
+    <div class="container">
+        <h2>Staff Dashboard</h2>
+        <div class="grid-cards" style="margin-top: 1rem;">
+            <div class="stat-card"><h3>Assigned</h3><div class="value" id="s-assigned">0</div></div>
+            <div class="stat-card"><h3>Pending</h3><div class="value" id="s-pending">0</div></div>
+            <div class="stat-card"><h3>In Progress</h3><div class="value" id="s-inprogress">0</div></div>
+            <div class="stat-card"><h3>Resolved</h3><div class="value" id="s-resolved">0</div></div>
+            <div class="stat-card"><h3>Urgent</h3><div class="value" id="s-urgent" style="color:var(--danger)">0</div></div>
+        </div>
+        
+        <div class="card">
+            <h3>My Tasks</h3>
+            <table>
+                <thead><tr><th>ID</th><th>Title</th><th>Status</th><th>Priority</th><th>Action</th></tr></thead>
+                <tbody id="c-table"></tbody>
+            </table>
+        </div>
+    </div>
+    
+    <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
+    <script>
+        const user = checkAuth(['staff']);
+        setupNavbar(user);
+        
+        async function load() {
+            const stats = await apiCall('/staff/stats');
+            document.getElementById('s-assigned').innerText = stats.assigned;
+            document.getElementById('s-pending').innerText = stats.pending;
+            document.getElementById('s-inprogress').innerText = stats.inProgress;
+            document.getElementById('s-resolved').innerText = stats.resolved;
+            document.getElementById('s-urgent').innerText = stats.urgent;
+            
+            const complaints = await apiCall('/complaints');
+            const tbody = document.getElementById('c-table');
+            // Filter only assigned to this staff or belonging to their dept but unassigned
+            tbody.innerHTML = complaints.filter(c => c.assigned_staff_id === user.id || !c.assigned_staff_id).slice(0,10).map(c => `
+                <tr>
+                    <td>#${c.id}</td>
+                    <td>${c.title}</td>
+                    <td><span class="badge badge-${c.status.replace(' ','')}">${c.status}</span></td>
+                    <td><span class="badge badge-${c.priority}">${c.priority}</span></td>
+                    <td><a href="/complaint-details.html?id=${c.id}" class="btn btn-primary" style="padding: 0.25rem">View / Update</a></td>
+                </tr>
+            `).join('');
+        }
+        load();
+    </script>
+</body>
+</html>

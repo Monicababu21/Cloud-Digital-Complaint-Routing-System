@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Manage Complaints</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-brand">Admin Panel</div>
+        <div class="navbar-menu" id="navbar-menu"></div>
+    </nav>
+    <div class="container">
+        <div class="card">
+            <h2>All Complaints</h2>
+            <div style="margin: 1rem 0; display:flex; gap:1rem;">
+                <input type="text" id="search" placeholder="Search title..." oninput="render()" style="width: 250px;">
+                <select id="f-status" onchange="render()"><option value="">All Statuses</option><option value="Pending">Pending</option><option value="In Progress">In Progress</option><option value="Resolved">Resolved</option></select>
+            </div>
+            <table>
+                <thead><tr><th>ID</th><th>Title</th><th>Dept</th><th>Status</th><th>Priority</th><th>Date</th><th>Action</th></tr></thead>
+                <tbody id="c-table"></tbody>
+            </table>
+        </div>
+    </div>
+    
+    <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
+    <script>
+        const user = checkAuth(['admin']);
+        setupNavbar(user);
+        let allC = [];
+        
+        async function load() {
+            allC = await apiCall('/complaints');
+            render();
+        }
+        function render() {
+            const q = document.getElementById('search').value.toLowerCase();
+            const s = document.getElementById('f-status').value;
+            let f = allC.filter(c => c.title.toLowerCase().includes(q));
+            if(s) f = f.filter(c => c.status === s);
+            
+            document.getElementById('c-table').innerHTML = f.map(c => `
+                <tr>
+                    <td>#${c.id}</td>
+                    <td>${c.title}</td>
+                    <td>${c.department_name || '-'}</td>
+                    <td><span class="badge badge-${c.status.replace(' ','')}">${c.status}</span></td>
+                    <td><span class="badge badge-${c.priority}">${c.priority}</span></td>
+                    <td>${new Date(c.created_at).toLocaleDateString()}</td>
+                    <td><a href="/complaint-details.html?id=${c.id}" class="btn btn-primary" style="padding: 0.25rem">View</a></td>
+                </tr>
+            `).join('');
+        }
+        load();
+    </script>
+</body>
+</html>

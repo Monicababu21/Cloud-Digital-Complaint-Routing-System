@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Complaint Details</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-brand">Complaint System</div>
+        <div class="navbar-menu" id="navbar-menu"></div>
+    </nav>
+    <div class="container">
+        <div class="card" id="detailsCard">Loading...</div>
+        
+        <div class="card" id="timelineCard" style="display:none;">
+            <h3>Status Timeline</h3>
+            <div class="timeline" id="timeline"></div>
+        </div>
+
+        <div class="card" id="updateFormCard" style="display:none;">
+            <h3>Update Status</h3>
+            <div id="alertBox" class="alert"></div>
+            <form id="updateForm">
+                <div class="form-group">
+                    <label>New Status</label>
+                    <select id="newStatus">
+                        <option value="Assigned">Assigned</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Resolved">Resolved</option>
+                        <option value="Rejected">Rejected</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Comment</label>
+                    <textarea id="comment" rows="3" required></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Update Complaint</button>
+            </form>
+        </div>
+        
+        <div class="card" id="historyCard" style="display:none;">
+            <h3>Update History</h3>
+            <table style="margin-top: 1rem;">
+                <thead><tr><th>Date</th><th>Updated By</th><th>Status Change</th><th>Comment</th></tr></thead>
+                <tbody id="historyTable"></tbody>
+            </table>
+        </div>
+    </div>
+    
+    <script src="/js/api.js"></script>
+    <script src="/js/auth.js"></script>
+    <script>
+        const user = checkAuth();
+        setupNavbar(user);
+        
+        const params = new URLSearchParams(window.location.search);
+        const cid = params.get('id');
+        
+        const stages = ['Submitted', 'Routed', 'Assigned', 'In Progress', 'Resolved'];
+        
+        async function load() {
+            try {
+                const c = await apiCall(`/complaints/${cid}`);
+                
+                document.getElementById('detailsCard').innerHTML = `
+                    <div style="display: flex; justify-content: space-between;">
+                        <h2>#${c.id} - ${c.title}</h2>
+                        <div>
+                            <span class="badge badge-${c.status.replace(' ','')}">${c.status}</span>
+                            <span class="badge badge-${c.priority}">${c.priority}</span>
+                        </div>
+                    </div>
+                    <p style="margin-top:1rem;"><strong>Requester:</strong> ${c.creator_name || 'N/A'}</p>
+                    <p><strong>Department:</strong> ${c.department_name || 'Pending routing'}</p>
+                    <p><strong>Assigned Staff:</strong> ${c.assigned_staff_name || 'Unassigned'}</p>
+                    <p><strong>Location:</strong> ${c.location}</p>
+                    <p><strong>Category:</strong> ${c.category}</p>
+                    <p><strong>Submitted:</strong> ${new Date(c.created_at).toLocaleString()}</p>
+                    <hr style="margin: 1rem 0; border: none; border-top: 1px solid var(--border);">
+                    <p><strong>Description:</strong><br>${c.description}</p>
+                `;
+                
+                // Timeline
+                document.getElementById('timelineCard').style.display = 'block';
+                let currentStageIdx = 0;
+                if(c.status === 'Routed') currentStageIdx = 1;
+                if(c.status === 'Assigned') currentStageIdx = 2;
+                if(c.status === 'In Progress') currentStageIdx = 3;
+                if(c.status === 'Resolved') currentStageIdx = 4;
+                if(c.status === 'Rejected') currentStageIdx = -1; // hide standard timeline
+                
+                if (c.status !== 'Rejected') {
+                    document.getElementById('timeline').innerHTML = stages.map((s, i) => {
+                        let cls = 'timeline-step';
+                        if (i < currentStageIdx) cls += ' completed';
+                        else if (i === currentStageIdx) cls += ' active';
+                        return `<div class="${cls}">${s}</div>`;
+                    }).join('');
+                } else {
+                    document.getElementById('timeline').innerHTML = `<div class="timeline-step completed" style="background:var(--danger); border-color:var(--danger)">Rejected</div>`;
+                }
+
+                // Show update form for staff/admin
+                if (user.role === 'staff' || user.role === 'admin') {
+                    if (c.status !== 'Resolved' && c.status !== 'Rejected') {
+                        document.getElementById('updateFormCard').style.display = 'block';
+                        document.getElementById('newStatus').value = c.status;
+                    }
+                }
+                
+                // History
+                if (c.updates && c.updates.length > 0) {
+                    document.getElementById('historyCard').style.display = 'block';
+                    document.getElementById('historyTable').innerHTML = c.updates.map(u => `
+                        <tr>
+                            <td>${new Date(u.created_at).toLocaleString()}</td>
+                            <td>${u.updater_name}</td>
+                            <td>${u.old_status} &rarr; ${u.new_status}</td>
+                            <td>${u.comment}</td>
+                        </tr>
+                    `).join('');
+                }
+            } catch(e) {
+                document.getElementById('detailsCard').innerHTML = `<p class="alert alert-error" style="display:block">Error loading complaint: ${e.message}</p>`;
+            }
+        }
+        
+        document.getElementById('updateForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const alertBox = document.getElementById('alertBox');
+            try {
+                await apiCall(`/complaints/${cid}/update`, 'POST', {
+                    status: document.getElementById('newStatus').value,
+                    comment: document.getElementById('comment').value
+                });
+                alertBox.textContent = 'Updated successfully';
+                alertBox.className = 'alert alert-success';
+                alertBox.style.display = 'block';
+                setTimeout(() => window.location.reload(), 1000);
+            } catch (err) {
+                alertBox.textContent = err.message;
+                alertBox.className = 'alert alert-error';
+                alertBox.style.display = 'block';
+            }
+        });
+        
+        load();
+    </script>
+</body>
+</html>
